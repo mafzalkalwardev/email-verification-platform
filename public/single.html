@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single Verify - AI Email Verifier</title>
+    <meta name="description" content="Verify any email address in real-time with AI-powered analysis, trust scoring, and risk detection.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        /* ── AI Result Card ───────────────────────────────────────── */
+        .result-card {
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+        .trust-score-ring {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 16px;
+        }
+        .trust-score-ring svg {
+            transform: rotate(-90deg);
+        }
+        .trust-score-ring .score-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .trust-score-ring .score-number {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .trust-score-ring .score-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+        }
+        .ai-badge {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.08em;
+        }
+        .check-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            background: rgba(0,0,0,0.03);
+            transition: background 0.2s;
+        }
+        body.dark-mode .check-row {
+            background: rgba(255,255,255,0.04);
+        }
+        .check-row:hover { background: rgba(0,0,0,0.06); }
+        body.dark-mode .check-row:hover { background: rgba(255,255,255,0.08); }
+        .check-icon { width: 28px; text-align: center; font-size: 1.1rem; flex-shrink: 0; }
+        .check-label { font-weight: 600; flex: 1; font-size: 0.9rem; }
+        .check-value { font-size: 0.82rem; opacity: 0.7; }
+        .risk-chip {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 3px;
+        }
+        .risk-chip.danger { background: rgba(220,53,69,0.12); color: #dc3545; border: 1px solid rgba(220,53,69,0.3); }
+        .risk-chip.success { background: rgba(40,167,69,0.12); color: #28a745; border: 1px solid rgba(40,167,69,0.3); }
+        .recommendation-banner {
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .recommendation-banner.accept { background: rgba(40,167,69,0.12); color: #28a745; border: 1px solid rgba(40,167,69,0.3); }
+        .recommendation-banner.review  { background: rgba(255,193,7,0.12); color: #c69500; border: 1px solid rgba(255,193,7,0.3); }
+        .recommendation-banner.reject  { background: rgba(220,53,69,0.12); color: #dc3545; border: 1px solid rgba(220,53,69,0.3); }
+        /* Typewriter animation for AI explanation */
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        .cursor { display: inline-block; width: 2px; height: 1em; background: currentColor; margin-left: 2px; animation: blink 0.8s infinite; vertical-align: text-bottom; }
+        /* Pulse ring for loading */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(99,102,241,0.5); }
+            70% { transform: scale(1); box-shadow: 0 0 0 16px rgba(99,102,241,0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+        }
+        .ai-loader { animation: pulse-ring 1.5s infinite; }
+        /* Animated score circle */
+        .score-circle-track { fill: none; stroke: rgba(0,0,0,0.08); stroke-width: 10; }
+        body.dark-mode .score-circle-track { stroke: rgba(255,255,255,0.1); }
+        .score-circle-fill {
+            fill: none;
+            stroke-width: 10;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1), stroke 0.5s;
+        }
+        .input-glow:focus {
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.25) !important;
+            border-color: #6366f1 !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar glass-card border-start-0 border-top-0 border-bottom-0 rounded-0">
+        <div class="px-4 mb-4 text-center">
+            <h3 class="gradient-text fw-bold m-0"><i class="fa-solid fa-envelope-circle-check"></i> Verifier</h3>
+            <div class="ai-badge mt-2">AI POWERED</div>
+        </div>
+        <nav class="nav flex-column px-2">
+            <a class="nav-link" href="/dashboard.html"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a>
+            <a class="nav-link active" href="/single.html"><i class="fa-solid fa-magnifying-glass me-2"></i> Single Verify</a>
+            <a class="nav-link" href="/bulk.html"><i class="fa-solid fa-file-csv me-2"></i> Bulk Verify</a>
+            <a class="nav-link" href="/history.html"><i class="fa-solid fa-clock-rotate-left me-2"></i> History</a>
+            
+            <hr class="text-secondary mx-3">
+            <button id="themeToggle" class="btn btn-link nav-link text-start"><i class="fa-solid fa-moon me-2"></i> Toggle Theme</button>
+            <button id="logoutBtn" class="btn btn-link nav-link text-start text-danger"><i class="fa-solid fa-right-from-bracket me-2"></i> Logout</button>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <h2 class="fw-bold mb-1 fade-in">Single Email Verification</h2>
+        <p class="text-muted mb-4 fade-in" style="animation-delay:0.05s;">Powered by AI risk scoring and multi-layer validation</p>
+
+        <!-- Input Card -->
+        <div class="row fade-in" style="animation-delay: 0.1s;">
+            <div class="col-lg-9 mx-auto">
+                <div class="glass-card p-4 p-md-5 mb-4">
+                    <form id="verifyForm">
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fa-solid fa-at"></i></span>
+                            <input type="email" class="form-control border-start-0 input-glow" id="emailInput"
+                                placeholder="someone@example.com" required autocomplete="email">
+                            <button class="btn px-4 fw-bold text-white" type="submit" id="verifyBtn"
+                                style="background: linear-gradient(135deg, #6366f1, #a855f7); border: none; border-radius: 0 10px 10px 0;">
+                                <i class="fa-solid fa-bolt me-1"></i> Verify
+                            </button>
+                        </div>
+                        <p class="text-muted small mt-2 mb-0"><i class="fa-solid fa-shield-halved me-1 text-success"></i> Real-time multi-layer check + OpenAI risk analysis</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loader -->
+        <div id="loader" class="col-lg-9 mx-auto text-center py-5 d-none fade-in">
+            <div class="glass-card p-5">
+                <div class="ai-loader d-inline-flex align-items-center justify-content-center rounded-circle mb-4"
+                    style="width:80px;height:80px;background:linear-gradient(135deg,#6366f1,#a855f7);">
+                    <i class="fa-solid fa-brain text-white fa-2x"></i>
+                </div>
+                <h5 class="fw-bold mb-2">AI is analyzing your email...</h5>
+                <p class="text-muted small mb-0">Running regex, MX, disposable detection & OpenAI risk scoring</p>
+            </div>
+        </div>
+
+        <!-- Result Area -->
+        <div id="resultArea" class="d-none fade-in" style="animation-delay:0.05s;">
+            <div class="col-lg-9 mx-auto">
+                <div class="glass-card result-card p-4 p-md-5">
+                    
+                    <!-- Header Row -->
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+                        <div>
+                            <h4 class="fw-bold mb-1" id="emailDisplay"></h4>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span id="statusBadge" class="badge fs-6 px-3 py-2"></span>
+                                <span id="riskBadge" class="badge fs-6 px-3 py-2"></span>
+                                <span id="domainTypeBadge" class="badge bg-light text-dark border fs-6 px-3 py-2"></span>
+                            </div>
+                        </div>
+                        <!-- Trust Score Ring -->
+                        <div class="text-center">
+                            <div class="trust-score-ring">
+                                <svg width="140" height="140" viewBox="0 0 140 140">
+                                    <circle class="score-circle-track" cx="70" cy="70" r="60"/>
+                                    <circle id="scoreCircle" class="score-circle-fill" cx="70" cy="70" r="60"
+                                        stroke-dasharray="377" stroke-dashoffset="377"/>
+                                </svg>
+                                <div class="score-text">
+                                    <div id="trustScoreNum" class="score-number">0</div>
+                                    <div class="score-label">Trust Score</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Explanation -->
+                    <div id="aiExplanationBox" class="mb-4 p-3 rounded-3" style="background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="fa-solid fa-brain" style="color:#6366f1;"></i>
+                            <span class="fw-bold small" style="color:#6366f1;">AI Analysis</span>
+                            <span class="ai-badge">GPT-4o mini</span>
+                            <span id="aiPoweredIndicator" class="ms-auto small text-muted"></span>
+                        </div>
+                        <p id="aiExplanationText" class="mb-0 small lh-lg"></p>
+                    </div>
+
+                    <!-- Recommendation Banner -->
+                    <div id="recommendationBanner" class="recommendation-banner mb-4">
+                        <i id="recommendationIcon" class="fa-solid fa-circle-check fa-lg"></i>
+                        <span>Recommendation: <span id="recommendationText" class="text-uppercase"></span></span>
+                    </div>
+
+                    <!-- Validator Checks -->
+                    <h6 class="fw-bold text-uppercase text-muted small mb-3" style="letter-spacing:0.08em;">Validation Checks</h6>
+                    <div id="checksContainer" class="mb-4"></div>
+
+                    <!-- Risk Flags & Positive Signals Row -->
+                    <div class="row g-3 mb-4">
+                        <div id="riskFlagsSection" class="col-md-6">
+                            <h6 class="fw-bold text-uppercase text-muted small mb-2" style="letter-spacing:0.08em;"><i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>Risk Flags</h6>
+                            <div id="riskFlagsContainer"></div>
+                        </div>
+                        <div id="positiveSection" class="col-md-6">
+                            <h6 class="fw-bold text-uppercase text-muted small mb-2" style="letter-spacing:0.08em;"><i class="fa-solid fa-thumbs-up text-success me-1"></i>Positive Signals</h6>
+                            <div id="positiveContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button id="verifyAnotherBtn" class="btn btn-outline-secondary">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Verify Another
+                        </button>
+                        <a href="/history.html" class="btn btn-outline-primary">
+                            <i class="fa-solid fa-clock-rotate-left me-1"></i> View History
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /main-content -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        const verifyForm    = document.getElementById('verifyForm');
+        const emailInput    = document.getElementById('emailInput');
+        const verifyBtn     = document.getElementById('verifyBtn');
+        const resultArea    = document.getElementById('resultArea');
+        const loader        = document.getElementById('loader');
+
+        /* ── Trust Score Color ─────────────────────────────── */
+        function scoreColor(score) {
+            if (score >= 80) return '#28a745';
+            if (score >= 55) return '#ffc107';
+            if (score >= 30) return '#fd7e14';
+            return '#dc3545';
+        }
+
+        /* ── Animate Trust Score Ring ──────────────────────── */
+        function animateTrustScore(score) {
+            const radius = 60;
+            const circumference = 2 * Math.PI * radius; // ≈ 377
+            const circle = document.getElementById('scoreCircle');
+            const numEl  = document.getElementById('trustScoreNum');
+            const color  = scoreColor(score);
+
+            circle.style.stroke = color;
+            numEl.style.color   = color;
+            
+            // Animate number count-up
+            let current = 0;
+            const step  = score / 50;
+            const timer = setInterval(() => {
+                current = Math.min(current + step, score);
+                numEl.textContent = Math.round(current);
+                if (current >= score) clearInterval(timer);
+            }, 20);
+
+            // Animate arc
+            const offset = circumference - (score / 100) * circumference;
+            setTimeout(() => { circle.style.strokeDashoffset = offset; }, 100);
+        }
+
+        /* ── Build Validator Check Rows ────────────────────── */
+        function renderChecks(validators) {
+            const container = document.getElementById('checksContainer');
+            container.innerHTML = '';
+
+            const checkDefs = [
+                { key: 'regex',      label: 'Format / Regex', icon: 'fa-code' },
+                { key: 'mx',         label: 'MX Records (Domain)', icon: 'fa-server' },
+                { key: 'disposable', label: 'Disposable Detection', icon: 'fa-trash' },
+                { key: 'smtp',       label: 'SMTP Verification', icon: 'fa-envelope-open-text' },
+            ];
+
+            checkDefs.forEach(def => {
+                const v = validators[def.key];
+                if (!v) return;
+
+                const isPass = v.valid === true;
+                const isDisabled = def.key === 'smtp'; // disabled on server
+                
+                const row = document.createElement('div');
+                row.className = 'check-row';
+                row.innerHTML = `
+                    <div class="check-icon ${isDisabled ? 'text-muted' : (isPass ? 'text-success' : 'text-danger')}">
+                        <i class="fa-solid ${isDisabled ? 'fa-ban' : (isPass ? 'fa-circle-check' : 'fa-circle-xmark')}"></i>
+                    </div>
+                    <div class="check-label">
+                        <i class="fa-solid ${def.icon} me-1 opacity-50 small"></i> ${def.label}
+                    </div>
+                    <div class="check-value">${isDisabled ? 'Disabled' : (isPass ? 'Passed' : (v.reason || 'Failed'))}</div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        /* ── Render Risk Flags & Positive Signals ──────────── */
+        function renderChips(flags, containerId, type) {
+            const el = document.getElementById(containerId);
+            el.innerHTML = '';
+            if (!flags || flags.length === 0) {
+                el.innerHTML = `<span class="text-muted small">None detected</span>`;
+                return;
+            }
+            flags.forEach(f => {
+                const chip = document.createElement('span');
+                chip.className = `risk-chip ${type}`;
+                chip.textContent = f;
+                el.appendChild(chip);
+            });
+        }
+
+        /* ── Typewriter effect for AI explanation ──────────── */
+        function typewriterEffect(text, elementId, speed = 18) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = '';
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            el.appendChild(cursor);
+
+            let i = 0;
+            const timer = setInterval(() => {
+                if (i < text.length) {
+                    el.insertBefore(document.createTextNode(text[i]), cursor);
+                    i++;
+                } else {
+                    cursor.remove();
+                    clearInterval(timer);
+                }
+            }, speed);
+        }
+
+        /* ── Render Full Result ────────────────────────────── */
+        function renderResult(data) {
+            const { email, status, validators, aiAnalysis } = data;
+
+            // Email display
+            document.getElementById('emailDisplay').textContent = email;
+
+            // Status badge
+            const statusBadge = document.getElementById('statusBadge');
+            const statusMap = { ok: ['bg-success', '✔ Valid'], invalid: ['bg-danger', '✖ Invalid'], disposable: ['bg-warning text-dark', '⚠ Disposable'], error: ['bg-secondary', '? Error'], unknown: ['bg-secondary', '? Unknown'] };
+            const [sc, sl] = statusMap[status] || ['bg-secondary', status.toUpperCase()];
+            statusBadge.className = `badge fs-6 px-3 py-2 ${sc}`;
+            statusBadge.textContent = sl;
+
+            // Risk level badge
+            const riskBadge = document.getElementById('riskBadge');
+            const riskColorMap = { LOW: 'bg-success', MEDIUM: 'bg-warning text-dark', HIGH: 'bg-danger', CRITICAL: 'bg-danger' };
+            riskBadge.className = `badge fs-6 px-3 py-2 ${riskColorMap[aiAnalysis.riskLevel] || 'bg-secondary'}`;
+            riskBadge.textContent = `${aiAnalysis.riskLevel} RISK`;
+
+            // Domain type badge
+            document.getElementById('domainTypeBadge').textContent = aiAnalysis.domainType;
+
+            // Trust score ring
+            animateTrustScore(aiAnalysis.trustScore);
+
+            // AI Explanation (typewriter)
+            typewriterEffect(aiAnalysis.aiExplanation, 'aiExplanationText');
+            document.getElementById('aiPoweredIndicator').textContent = aiAnalysis.aiPowered ? '✓ Live AI' : '⚡ Fallback';
+
+            // Recommendation banner
+            const recBanner = document.getElementById('recommendationBanner');
+            const recText   = document.getElementById('recommendationText');
+            const recIcon   = document.getElementById('recommendationIcon');
+            const recMap = {
+                ACCEPT: ['accept', 'fa-circle-check',   'ACCEPT — Safe to use'],
+                REVIEW: ['review', 'fa-circle-question', 'REVIEW — Proceed with caution'],
+                REJECT: ['reject', 'fa-circle-xmark',   'REJECT — Do not use'],
+            };
+            const [recClass, recIconClass, recLabel] = recMap[aiAnalysis.recommendation] || recMap['REVIEW'];
+            recBanner.className = `recommendation-banner mb-4 ${recClass}`;
+            recIcon.className   = `fa-solid ${recIconClass} fa-lg`;
+            recText.textContent = recLabel;
+
+            // Validator checks
+            if (validators) renderChecks(validators);
+
+            // Risk flags & positive signals
+            renderChips(aiAnalysis.riskFlags, 'riskFlagsContainer', 'danger');
+            renderChips(aiAnalysis.positiveSignals, 'positiveContainer', 'success');
+
+            // Show result
+            resultArea.classList.remove('d-none');
+        }
+
+        /* ── Form Submit ───────────────────────────────────── */
+        verifyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value.trim();
+            if (!email) return;
+
+            verifyBtn.disabled = true;
+            resultArea.classList.add('d-none');
+            loader.classList.remove('d-none');
+
+            try {
+                const res = await axios.post('/api/verify/single', { email });
+                renderResult(res.data);
+                showToast('Verification & AI analysis complete!', 'success');
+            } catch (err) {
+                showToast(err.response?.data?.message || 'Verification failed', 'error');
+            } finally {
+                verifyBtn.disabled = false;
+                loader.classList.add('d-none');
+            }
+        });
+
+        /* ── Verify Another Button ─────────────────────────── */
+        document.getElementById('verifyAnotherBtn').addEventListener('click', () => {
+            resultArea.classList.add('d-none');
+            emailInput.value = '';
+            emailInput.focus();
+        });
+    </script>
+</body>
+</html>

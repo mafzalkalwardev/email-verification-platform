@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Verify - AI Email Verifier</title>
+    <meta name="description" content="Upload a CSV or XLSX file and verify hundreds of emails with AI trust scoring in real-time.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .ai-badge {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.08em;
+        }
+        .upload-zone {
+            border: 2px dashed rgba(99,102,241,0.4);
+            border-radius: 16px;
+            padding: 48px 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(99,102,241,0.03);
+        }
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: #6366f1;
+            background: rgba(99,102,241,0.08);
+        }
+        .upload-zone i { font-size: 3rem; color: #6366f1; margin-bottom: 16px; }
+        .upload-zone p { margin: 0; font-weight: 600; }
+        .upload-zone small { color: #888; }
+        .results-table th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+        .trust-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            min-width: 42px;
+            text-align: center;
+        }
+        .mini-stat-card {
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar glass-card border-start-0 border-top-0 border-bottom-0 rounded-0">
+        <div class="px-4 mb-4 text-center">
+            <h3 class="gradient-text fw-bold m-0"><i class="fa-solid fa-envelope-circle-check"></i> Verifier</h3>
+            <div class="ai-badge mt-2">AI POWERED</div>
+        </div>
+        <nav class="nav flex-column px-2">
+            <a class="nav-link" href="/dashboard.html"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard</a>
+            <a class="nav-link" href="/single.html"><i class="fa-solid fa-magnifying-glass me-2"></i> Single Verify</a>
+            <a class="nav-link active" href="/bulk.html"><i class="fa-solid fa-file-csv me-2"></i> Bulk Verify</a>
+            <a class="nav-link" href="/history.html"><i class="fa-solid fa-clock-rotate-left me-2"></i> History</a>
+            <hr class="text-secondary mx-3">
+            <button id="themeToggle" class="btn btn-link nav-link text-start"><i class="fa-solid fa-moon me-2"></i> Toggle Theme</button>
+            <button id="logoutBtn" class="btn btn-link nav-link text-start text-danger"><i class="fa-solid fa-right-from-bracket me-2"></i> Logout</button>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <h2 class="fw-bold mb-1 fade-in">Bulk Email Verification</h2>
+        <p class="text-muted mb-4 fade-in" style="animation-delay:0.05s;">Upload a CSV or XLSX file — each email verified with AI trust scoring</p>
+
+        <!-- Upload Card -->
+        <div class="col-lg-9 mx-auto fade-in" style="animation-delay:0.1s;">
+            <div class="glass-card p-4 mb-4">
+                <form id="uploadForm">
+                    <div id="dropZone" class="upload-zone mb-4">
+                        <i class="fa-solid fa-cloud-arrow-up d-block mb-2"></i>
+                        <p>Drag & Drop your file here or <label for="fileInput" class="text-primary" style="cursor:pointer;text-decoration:underline;">browse</label></p>
+                        <small>Supports .csv and .xlsx — one email per row</small>
+                        <input type="file" id="fileInput" accept=".csv, .xlsx" class="d-none" required>
+                    </div>
+                    <div id="fileNameDisplay" class="d-none mb-3 p-3 rounded-3" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);">
+                        <i class="fa-solid fa-file-csv me-2" style="color:#6366f1;"></i>
+                        <span id="fileNameText" class="fw-semibold"></span>
+                    </div>
+                    <button class="btn w-100 py-3 fw-bold text-white" type="submit" id="uploadBtn"
+                        style="background: linear-gradient(135deg, #6366f1, #a855f7); border: none; border-radius: 12px; font-size: 1.05rem;">
+                        <i class="fa-solid fa-bolt me-2"></i>Start AI-Powered Bulk Verification
+                    </button>
+                </form>
+
+                <!-- Progress Area -->
+                <div id="progressArea" class="mt-5 d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold">Progress <span id="aiNote" class="small text-muted fw-normal">(includes AI analysis per email)</span></span>
+                        <span id="progressText" class="fw-bold gradient-text">0 / 0</span>
+                    </div>
+                    <div class="progress mb-4">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;"></div>
+                    </div>
+
+                    <!-- Mini Stats -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-md-3">
+                            <div class="mini-stat-card border border-success text-success">
+                                <div class="small fw-normal opacity-75">Valid</div>
+                                <div id="pValid">0</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="mini-stat-card border border-danger text-danger">
+                                <div class="small fw-normal opacity-75">Invalid</div>
+                                <div id="pInvalid">0</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="mini-stat-card border border-warning text-warning">
+                                <div class="small fw-normal opacity-75">Disposable</div>
+                                <div id="pDisposable">0</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="mini-stat-card border border-secondary text-secondary">
+                                <div class="small fw-normal opacity-75">Other</div>
+                                <div id="pOther">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Avg Trust Score -->
+                    <div id="avgTrustBox" class="d-none p-3 rounded-3 mb-4 text-center" style="background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);">
+                        <div class="small text-muted mb-1"><i class="fa-solid fa-brain me-1" style="color:#6366f1;"></i>Average AI Trust Score</div>
+                        <div id="avgTrustScore" class="fw-bold" style="font-size:2rem;color:#6366f1;">—</div>
+                    </div>
+
+                    <button id="exportBtn" class="btn btn-outline-success w-100 d-none">
+                        <i class="fa-solid fa-download me-2"></i>Export Results (CSV with AI scores)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Results Table -->
+            <div id="resultsTableSection" class="d-none">
+                <div class="glass-card p-4">
+                    <h5 class="fw-bold mb-3">
+                        Live Results
+                        <span class="ai-badge ms-2">AI Scored</span>
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 results-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>AI Trust Score</th>
+                                    <th>Risk Level</th>
+                                    <th>Recommendation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        const uploadForm    = document.getElementById('uploadForm');
+        const fileInput     = document.getElementById('fileInput');
+        const uploadBtn     = document.getElementById('uploadBtn');
+        const progressArea  = document.getElementById('progressArea');
+        const progressText  = document.getElementById('progressText');
+        const progressBar   = document.getElementById('progressBar');
+        const exportBtn     = document.getElementById('exportBtn');
+        const dropZone      = document.getElementById('dropZone');
+
+        let results = [];
+
+        /* ── File drag & drop ─────────────────────────── */
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileDisplay(e.dataTransfer.files[0].name);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) updateFileDisplay(fileInput.files[0].name);
+        });
+
+        function updateFileDisplay(name) {
+            document.getElementById('fileNameText').textContent = name;
+            document.getElementById('fileNameDisplay').classList.remove('d-none');
+        }
+
+        /* ── Trust Score Color ────────────────────────── */
+        function trustColor(score) {
+            if (score >= 80) return { bg: 'rgba(40,167,69,0.15)', color: '#28a745' };
+            if (score >= 55) return { bg: 'rgba(255,193,7,0.15)', color: '#c69500' };
+            if (score >= 30) return { bg: 'rgba(253,126,20,0.15)', color: '#fd7e14' };
+            return { bg: 'rgba(220,53,69,0.15)', color: '#dc3545' };
+        }
+
+        function statusBadgeClass(status) {
+            const s = status.toLowerCase();
+            if (s === 'ok' || s === 'valid') return 'bg-success';
+            if (s === 'invalid' || s === 'fail' || s === 'error') return 'bg-danger';
+            if (s === 'disposable') return 'bg-warning text-dark';
+            return 'bg-secondary';
+        }
+
+        function recIcon(rec) {
+            if (rec === 'ACCEPT') return '<i class="fa-solid fa-circle-check text-success"></i>';
+            if (rec === 'REJECT') return '<i class="fa-solid fa-circle-xmark text-danger"></i>';
+            return '<i class="fa-solid fa-circle-question text-warning"></i>';
+        }
+
+        /* ── Add row to live table ────────────────────── */
+        let rowIndex = 0;
+        function addResultRow(email, status, aiAnalysis) {
+            rowIndex++;
+            const tbody = document.getElementById('resultsTableBody');
+            const tc = trustColor(aiAnalysis.trustScore);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-muted small">${rowIndex}</td>
+                <td class="fw-medium">${email}</td>
+                <td><span class="badge ${statusBadgeClass(status)}">${status.toUpperCase()}</span></td>
+                <td>
+                    <span class="trust-pill" style="background:${tc.bg};color:${tc.color};">
+                        ${aiAnalysis.trustScore}
+                    </span>
+                </td>
+                <td><span class="badge ${statusBadgeClass(aiAnalysis.riskLevel === 'LOW' ? 'valid' : aiAnalysis.riskLevel === 'HIGH' || aiAnalysis.riskLevel === 'CRITICAL' ? 'invalid' : 'other')}">${aiAnalysis.riskLevel}</span></td>
+                <td>${recIcon(aiAnalysis.recommendation)} ${aiAnalysis.recommendation}</td>
+            `;
+            tbody.appendChild(tr);
+            document.getElementById('resultsTableSection').classList.remove('d-none');
+        }
+
+        /* ── Form Submit ──────────────────────────────── */
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            // Reset
+            uploadBtn.disabled  = true;
+            fileInput.disabled  = true;
+            progressArea.classList.remove('d-none');
+            exportBtn.classList.add('d-none');
+            document.getElementById('avgTrustBox').classList.add('d-none');
+            document.getElementById('resultsTableSection').classList.add('d-none');
+            document.getElementById('resultsTableBody').innerHTML = '';
+            progressBar.style.width = '0%';
+            results = [];
+            rowIndex = 0;
+            ['pValid','pInvalid','pDisposable','pOther'].forEach(id => document.getElementById(id).textContent = '0');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                showToast('Parsing file...', 'info');
+                const res = await axios.post('/api/verify/upload-bulk', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                const emails = res.data.emails;
+                if (!emails || emails.length === 0) {
+                    showToast('No valid emails found in file', 'error');
+                    resetUI(); return;
+                }
+
+                showToast(`Found ${emails.length} emails. Starting AI verification...`, 'info');
+
+                let completed = 0, validCount = 0, invalidCount = 0, disposableCount = 0, otherCount = 0;
+                let totalTrustScore = 0;
+
+                for (let i = 0; i < emails.length; i++) {
+                    const email = emails[i];
+                    try {
+                        const vRes = await axios.post('/api/verify/single', { email, source: 'bulk' });
+                        const { status, aiAnalysis } = vRes.data;
+                        const s = (status || '').toLowerCase();
+
+                        if (s === 'ok' || s === 'valid')       validCount++;
+                        else if (s === 'disposable')            disposableCount++;
+                        else if (s === 'invalid' || s === 'fail' || s === 'error') invalidCount++;
+                        else                                    otherCount++;
+
+                        totalTrustScore += (aiAnalysis?.trustScore || 0);
+                        results.push({
+                            email, status,
+                            trustScore: aiAnalysis?.trustScore ?? '—',
+                            riskLevel: aiAnalysis?.riskLevel ?? '—',
+                            recommendation: aiAnalysis?.recommendation ?? '—',
+                            domainType: aiAnalysis?.domainType ?? '—',
+                        });
+
+                        addResultRow(email, status, aiAnalysis || { trustScore: 0, riskLevel: 'UNKNOWN', recommendation: 'REVIEW' });
+                    } catch (err) {
+                        results.push({ email, status: 'api_error', trustScore: '—', riskLevel: '—', recommendation: '—', domainType: '—' });
+                        otherCount++;
+                        addResultRow(email, 'error', { trustScore: 0, riskLevel: 'UNKNOWN', recommendation: 'REVIEW' });
+                    }
+
+                    completed++;
+                    const pct = Math.round((completed / emails.length) * 100);
+                    progressBar.style.width = pct + '%';
+                    progressText.textContent = `${completed} / ${emails.length}`;
+                    document.getElementById('pValid').textContent       = validCount;
+                    document.getElementById('pInvalid').textContent     = invalidCount;
+                    document.getElementById('pDisposable').textContent  = disposableCount;
+                    document.getElementById('pOther').textContent       = otherCount;
+                }
+
+                // Show average AI trust score
+                const avg = Math.round(totalTrustScore / emails.length);
+                document.getElementById('avgTrustScore').textContent = avg + '/100';
+                document.getElementById('avgTrustBox').classList.remove('d-none');
+
+                showToast('✅ Bulk AI verification complete!', 'success');
+                exportBtn.classList.remove('d-none');
+                uploadBtn.textContent = '🔄 Verify Another File';
+            } catch (err) {
+                showToast(err.response?.data?.message || 'Upload failed', 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                fileInput.disabled = false;
+            }
+        });
+
+        function resetUI() {
+            uploadBtn.disabled = false;
+            fileInput.disabled = false;
+        }
+
+        /* ── Export CSV with AI fields ────────────────── */
+        exportBtn.addEventListener('click', () => {
+            if (!results.length) return;
+            let csv = 'Email,Status,AI Trust Score,Risk Level,Recommendation,Domain Type\n';
+            results.forEach(r => {
+                csv += `"${r.email}","${r.status}","${r.trustScore}","${r.riskLevel}","${r.recommendation}","${r.domainType}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = `email_verification_ai_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
