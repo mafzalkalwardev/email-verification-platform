@@ -38,6 +38,10 @@ Documented · MIT licensed · Maintained
 
 A full-stack, modern web application for single and bulk email verification, integrated with the EmailListVerify API.
 
+## Screenshots
+
+![email-verification-platform dashboard](docs/screenshots/app.png)
+
 ## Features
 - **Modern Glassmorphism UI:** Responsive and dynamic design with Dark/Light mode support.
 - **Authentication:** Dummy registration and login system with JWT.
