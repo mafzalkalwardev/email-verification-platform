@@ -10,22 +10,11 @@ Documented · MIT licensed · Maintained
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 [![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](CONTRIBUTING.md)
 
-[Features](#-features) · [Quick Start](#-quick-start) · [Screenshots](#-screenshots) · [Contributing](CONTRIBUTING.md)
-
 </div>
 
 ---
 
-## 🖼 Screenshots
-
-![Email Verification Platform screenshot](docs/screenshots/placeholder.svg)
-
-*Replace `docs/screenshots/placeholder.svg` with real app screenshots.*
-
----
-
 ## 🐍 Contribution graph
-
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mafzalkalwardev/email-verification-platform/output/snake-dark.svg" />
@@ -33,14 +22,9 @@ Documented · MIT licensed · Maintained
   <img alt="Contribution snake" src="https://raw.githubusercontent.com/mafzalkalwardev/email-verification-platform/output/snake.svg" />
 </picture>
 
-
 ---
 
 A full-stack, modern web application for single and bulk email verification, integrated with the EmailListVerify API.
-
-## Screenshots
-
-![email-verification-platform dashboard](docs/screenshots/app.png)
 
 ## Features
 - **Modern Glassmorphism UI:** Responsive and dynamic design with Dark/Light mode support.
