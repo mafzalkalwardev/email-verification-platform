@@ -121,6 +121,25 @@ Built using Node.js, Express, Axios, and Bootstrap 5.
 
 ---
 
+---
+
+## Case Study (Problem → Stack → Result)
+
+### Problem
+Teams sending outreach needed bulk email validation with history, auth, and analytics — not a fragile one-file script.
+
+### Stack
+Full-stack web app, MongoDB, CSV/XLSX uploads, EmailListVerify API, analytics dashboards
+
+### Result
+Shipped a multi-user verification platform with bulk uploads, verification history, and reporting so ops teams can clean lists before campaigns.
+
+**Audience:** Email ops, agencies, SaaS GTM teams
+
+📄 Full write-up: [`CASE_STUDY.md`](./CASE_STUDY.md)
+
+**Hire / contact:** GitHub [@mafzalkalwardev](https://github.com/mafzalkalwardev) · LinkedIn [@mafzalkalwardev](https://www.linkedin.com/in/mafzalkalwardev) · WhatsApp [+92 307 9670503](https://wa.me/923079670503) · [Portfolio](https://mafzalkalwardev.github.io) · [Email](mailto:kalwarmuhammadafzal3@gmail.com)
+
 ## Discoverability
 
 **Author:** Muhammad Afzal Kalwar ([@mafzalkalwardev](https://github.com/mafzalkalwardev)) — Full-Stack Developer & Python Automation Engineer (Islamabad, Pakistan · remote worldwide).
